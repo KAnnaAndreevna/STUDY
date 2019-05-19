@@ -1,0 +1,52 @@
+create or replace
+PROCEDURE SearchAllTables(valueParam VARCHAR2) AS
+TYPE VALCUR IS REF CURSOR;
+
+ CURSOR tabl IS SELECT table_name FROM user_tables;
+
+ CURSOR col (tablename VARCHAR2) IS
+ SELECT column_name
+ FROM user_tab_columns
+ WHERE table_name LIKE tableName AND
+ User_tab_columns.Data_type = 'VARCHAR2';
+
+ valueCursor VALCUR;
+ tableName VARCHAR2(50);
+ columnName VARCHAR2(50);
+ columnValue VARCHAR2(500);
+ 
+BEGIN
+COMMIT;
+DELETE FROM Search_val1;
+
+ OPEN tabl;
+
+ LOOP
+ FETCH tabl INTO tableName;
+ EXIT WHEN tabl%NOTFOUND;
+ OPEN col(tableName);
+
+ LOOP
+ FETCH col INTO columnName;
+ EXIT WHEN col%NOTFOUND;
+ OPEN valueCursor FOR 'SELECT ' || columnName || ' FROM ' ||
+tableName;
+
+ LOOP
+ BEGIN
+ FETCH valueCursor INTO columnValue;
+ EXIT WHEN valueCursor%NOTFOUND;
+ IF (columnValue LIKE valueParam) THEN
+ INSERT INTO Search_val1(Tab_name,Col_name,Col_value)
+ VALUES (tableName,columnName,columnValue);
+ EXIT;
+ 
+ END IF;
+ END;
+ END LOOP;
+ CLOSE valueCursor;
+
+ END LOOP;
+ CLOSE col;
+ END LOOP;
+END SearchAllTables;
