@@ -1,0 +1,487 @@
+CREATE OR REPLACE TRIGGER DIS_AGE
+
+	BEFORE INSERT ON LIST_OF_STUDENTS_1K
+	FOR EACH ROW
+	
+DECLARE
+
+wrong_ EXCEPTION;
+mustage INTEGER;
+age_stud INTEGER;
+
+CURSOR m1 (disid integer) IS 
+SELECT dis.age_category
+FROM Discipline dis
+WHERE dis.Disc_Id = disid;
+
+CURSOR m2 (studid integer) IS 
+SELECT Z.age
+FROM ZAYAVKA_STUDENTS Z
+WHERE Z.ID_STUDENT = studid;
+
+BEGIN
+
+Open m1 (:new.disc_id);
+FETCH m1 INTO mustage;
+
+Open m2 (:new.id_student);
+FETCH m2 INTO age_stud;
+
+IF NOT (m1%NOTFOUND) THEN 
+IF age_stud < mustage THEN 
+RAISE wrong_;
+
+END IF;
+END IF;
+CLOSE m1;
+CLOSE m2;
+
+EXCEPTION
+WHEN wrong_ THEN
+CLOSE m1;
+RAISE_application_error(-20000,'Дисциплина не соответстует возростной категории'); 		
+END ;
+
+CREATE Sequence S1
+ Start with 1
+ Increment by 1;
+
+CREATE OR REPLACE TRIGGER ID_FOR_EVENT
+ BEFORE INSERT ON LIST_OF_EVENTS
+ FOR EACH ROW
+BEGIN
+ SELECT S1.nextval INTO :new.Event_Id
+ FROM DUAL;
+END;
+
+CREATE Sequence S2
+ Start with 20
+ Increment by 1;
+
+CREATE OR REPLACE TRIGGER ID_FOR_DIS
+ BEFORE INSERT ON Discipline
+ FOR EACH ROW
+BEGIN
+ SELECT S2.nextval INTO :new.DISC_ID
+ FROM DUAL;
+END;
+
+CREATE OR REPLACE TRIGGER UPDATE_DIS
+ BEFORE DELETE ON Discipline
+ FOR EACH ROW
+BEGIN
+ UPDATE LIST_OF_STUDENTS_1K
+ SET DISC_ID = null
+ WHERE DISC_ID = :old.DISC_ID;
+END;
+
+CREATE OR REPLACE PROCEDURE Deduct
+IS
+CURSOR C11(INMARK STUDENTS_EXAMS.MARK_EXAM%TYPE) IS SELECT * FROM Students_Exams WHERE Mark_Exam= INMARK; 
+  Mark1 Students_Exams%rowtype;
+BEGIN
+	OPEN C11(2); 
+	LOOP 
+		FETCH C11 INTO Mark1;	
+		EXIT WHEN C11%NOTFOUND;
+    INSERT INTO LIST_OF_EXPELLED (ID_STUDENT,DISC_ID, GPA, DEDUCTIONS_DATE) VALUES (Mark1.ID_STUDENT,Mark1.DISC_ID,2,sysdate); 
+	END LOOP;		
+CLOSE C11;
+END;
+
+CREATE OR REPLACE PROCEDURE LISTING_STUDENTS_2K
+IS
+	CURSOR C12(INMARK STUDENTS_EXAMS.MARK_EXAM%TYPE) IS SELECT * FROM Students_Exams WHERE Mark_Exam>INMARK; 
+  Mark1 Students_Exams%rowtype;
+BEGIN
+	OPEN C12(2); 
+	LOOP 
+		FETCH C12 INTO Mark1;	
+		EXIT WHEN C12%NOTFOUND;
+    INSERT INTO LIST_OF_STUDENTS_2K (ID_STUDENT,DISC_ID, GPA) VALUES (Mark1.ID_STUDENT,Mark1.DISC_ID,Mark1.Mark_Exam); 
+	END LOOP;		
+CLOSE C12;
+END;
+
+CREATE OR REPLACE PROCEDURE SCHOLARSHIP_NACH 
+IS
+	CURSOR M1 IS SELECT ID_STUDENT FROM LIST_OF_STUDENTS_2K WHERE GPA=5 
+  intersect SELECT student_id FROM Olympiad_report WHERE Result_olympiad=1; 
+  CURSOR M2 IS SELECT ID_STUDENT FROM LIST_OF_STUDENTS_2K WHERE GPA=5 
+  intersect SELECT student_id FROM Olympiad_report WHERE Result_olympiad=2;
+  CURSOR M3 IS SELECT ID_STUDENT FROM LIST_OF_STUDENTS_2K WHERE GPA=4 
+  intersect SELECT student_id FROM Olympiad_report WHERE Result_olympiad=1;
+  CURSOR M4 IS SELECT ID_STUDENT FROM LIST_OF_STUDENTS_2K WHERE GPA=4 
+  intersect SELECT student_id FROM Olympiad_report WHERE Result_olympiad=2;
+  
+  ID_stud1 INTEGER;
+  ID_stud2 INTEGER;
+  ID_stud3 INTEGER;
+  ID_stud4 INTEGER;
+  
+BEGIN
+	OPEN M1; 
+	LOOP 
+		FETCH M1 INTO ID_stud1;	
+		EXIT WHEN M1%NOTFOUND;
+     UPDATE LIST_OF_STUDENTS_2K SET SCHOLARSHIP_ID=1 WHERE ID_STUDENT=ID_stud1;
+	END LOOP;		
+CLOSE M1;
+
+	OPEN M2; 
+	LOOP 
+		FETCH M2 INTO ID_stud2;	
+		EXIT WHEN M2%NOTFOUND;
+     UPDATE LIST_OF_STUDENTS_2K SET SCHOLARSHIP_ID=2 WHERE ID_STUDENT=ID_stud2;
+	END LOOP;		
+CLOSE M2;
+
+OPEN M3; 
+	LOOP 
+		FETCH M3 INTO ID_stud3;	
+		EXIT WHEN M3%NOTFOUND;
+     UPDATE LIST_OF_STUDENTS_2K SET SCHOLARSHIP_ID=3 WHERE ID_STUDENT=ID_stud3;
+	END LOOP;		
+CLOSE M3;
+
+OPEN M4; 
+	LOOP 
+		FETCH M4 INTO ID_stud4;	
+		EXIT WHEN M3%NOTFOUND;
+     UPDATE LIST_OF_STUDENTS_2K SET SCHOLARSHIP_ID=4 WHERE ID_STUDENT=ID_stud4;
+	END LOOP;		
+CLOSE M4;
+
+END;
+
+CREATE OR REPLACE TRIGGER Teach_skill
+	BEFORE INSERT ON Dis_teacher
+	FOR EACH ROW
+DECLARE
+  wrong_ EXCEPTION;
+  mustdis INTEGER;
+CURSOR m1 IS 
+ SELECT skil.ID_DIC
+ FROM Teacher_skills skil
+ WHERE skil.ID_TEACHER = :new.id_teacher;
+
+BEGIN
+ Open m1;
+ FETCH m1 INTO mustdis;
+ IF NOT (m1%NOTFOUND) THEN 
+  IF :new.id_dic != mustdis THEN 
+    RAISE wrong_;
+  END IF;
+ END IF;
+CLOSE m1;
+
+EXCEPTION
+WHEN wrong_ THEN
+CLOSE m1;
+RAISE_application_error(-20000,'Дисциплина не соответстует преподавателю'); 		
+END ;
+
+CREATE OR REPLACE TRIGGER TeachersZan
+	BEFORE INSERT ON LIST_OF_EVENTS
+	FOR EACH ROW
+DECLARE
+  wrong_ EXCEPTION;
+  must VARCHAR2(5);
+  
+  CURSOR m3 IS 
+  SELECT Z.day_n
+  FROM Zan_teacher Z
+  WHERE Z.id_teacher = :new.responsible_id;
+BEGIN
+   Open m3;
+   FETCH m3 INTO must;
+   IF must=Day_Of_Week(:new.date_event) THEN 
+    RAISE wrong_;
+ END IF;
+CLOSE m3;
+
+EXCEPTION
+WHEN wrong_ THEN
+CLOSE m3;
+RAISE_application_error(-20000,'Преподаватель занят'); 		
+END ;
+
+
+
+DECLARE 
+ Y integer;
+BEGIN 
+ Y:=SCHOLARSHIP_sum(1);
+ DBMS_OUTPUT.put_line(y);
+END;
+
+ALTER TABLE Discipline 
+ADD CONSTRAINT dis_pk PRIMARY KEY (Disc_id);
+
+ALTER TABLE List_of_students_1K 
+ADD CONSTRAINT st_fk
+FOREIGN KEY (Disc_id)
+REFERENCES Discipline(Disc_id);
+
+ALTER TABLE List_of_students_1K 
+ENABLE CONSTRAINT st_fk;
+
+ALTER TABLE Teacher_skills 
+ADD CONSTRAINT teach_fk
+FOREIGN KEY (id_dic)
+REFERENCES Discipline(Disc_id);
+
+ALTER TABLE Zayavka_students 
+ADD CONSTRAINT st_id_pk PRIMARY KEY (id_student);
+
+ALTER TABLE List_of_students_1K 
+ADD CONSTRAINT stud_fk
+FOREIGN KEY (id_student)
+REFERENCES Zayavka_students(id_student);
+
+ALTER TABLE Teachers 
+ADD CONSTRAINT teach_id_pk PRIMARY KEY (teacher_id);
+
+ALTER TABLE  Students_exams
+ADD CONSTRAINT stud1_fk
+FOREIGN KEY (id_student)
+REFERENCES Zayavka_students(id_student);
+
+ALTER TABLE List_of_events 
+ADD CONSTRAINT event_id_pk PRIMARY KEY (event_id);
+
+ALTER TABLE  Contest_report
+ADD CONSTRAINT contect_fk
+FOREIGN KEY (contest_id)
+REFERENCES List_of_events(event_id);
+
+ALTER TABLE  Olympiad_report
+ADD CONSTRAINT olim_fk
+FOREIGN KEY (Olympiad_id)
+REFERENCES List_of_events(event_id);
+
+CREATE OR REPLACE PACKAGE Mypack
+AS
+PROCEDURE Deduct;
+PROCEDURE LISTING_STUDENTS_2K;
+PROCEDURE SCHOLARSHIP_NACH;
+PROCEDURE Listing (Surname1 IN VARCHAR2, Disc1 IN VARCHAR2);
+PROCEDURE Olympiad (olympiad_name IN VARCHAR2, stud_surname IN VARCHAR2, result1 IN INTEGER);
+PROCEDURE Contest (contest_name IN VARCHAR2, name1 IN VARCHAR2,surname1 IN VARCHAR2,otch1 IN VARCHAR2, prize1 IN VARCHAR2);
+PROCEDURE Discipline_teacher (teacher_name IN VARCHAR2, discipline_name IN VARCHAR2);
+FUNCTION Day_Of_Week(DATE1 IN DATE) RETURN VARCHAR2;
+FUNCTION SCHOLARSHIP_sum(ID_S IN INTEGER) RETURN INTEGER;
+FUNCTION SR_ADE_Teachers(Age INTEGER) RETURN INTEGER;
+END;
+
+CREATE OR REPLACE PACKAGE BODY Mypack
+AS
+PROCEDURE Deduct
+IS
+	CURSOR C11(INMARK STUDENTS_EXAMS.MARK_EXAM%TYPE) IS SELECT * FROM Students_Exams WHERE Mark_Exam= INMARK; 
+
+  Mark1 Students_Exams%rowtype;
+  M1 INTEGER;
+  M2 INTEGER;
+  
+BEGIN
+SELECT COUNT(ID_STUDENT)INTO M1 FROM LIST_OF_EXPELLED WHERE Disc_id=Mark1.DISC_ID  ;
+SELECT COUNT(ID_STUDENT) INTO M2 FROM Students_Exams WHERE Disc_id=Mark1.DISC_ID;
+
+	OPEN C11(2); 
+	LOOP 
+		FETCH C11 INTO Mark1;	
+		EXIT WHEN C11%NOTFOUND;
+    if M1=M2  then
+     DBMS_OUTPUT.put_line('Такой ученик есть!');
+     else
+    INSERT INTO LIST_OF_EXPELLED (ID_STUDENT,DISC_ID, GPA, DEDUCTIONS_DATE) VALUES (Mark1.ID_STUDENT,Mark1.DISC_ID,2,sysdate); 
+    END IF;
+	END LOOP;		
+CLOSE C11;
+END;
+PROCEDURE LISTING_STUDENTS_2K
+IS
+	CURSOR C12(INMARK STUDENTS_EXAMS.MARK_EXAM%TYPE) IS SELECT * FROM Students_Exams WHERE Mark_Exam>INMARK; 
+  Mark1 Students_Exams%rowtype;
+    M1 INTEGER;
+    M2 INTEGER;
+BEGIN
+
+SELECT COUNT(ID_STUDENT)INTO M1 FROM LIST_OF_STUDENTS_2K WHERE Disc_id=Mark1.DISC_ID;
+SELECT COUNT(ID_STUDENT) INTO M2 FROM Students_Exams WHERE Disc_id=Mark1.DISC_ID;
+
+	OPEN C12(2); 
+	LOOP 
+		FETCH C12 INTO Mark1;	
+		EXIT WHEN C12%NOTFOUND;
+     if M1=M2  then
+     DBMS_OUTPUT.put_line('Такой ученик есть!');
+      End if;
+    if M1!=M2 AND M1!=0 then
+    INSERT INTO LIST_OF_STUDENTS_2K (ID_STUDENT,DISC_ID, GPA) VALUES (Mark1.ID_STUDENT,Mark1.DISC_ID,Mark1.Mark_Exam); 
+    End if;
+	END LOOP;		
+CLOSE C12;
+END;
+
+PROCEDURE SCHOLARSHIP_NACH 
+IS
+	CURSOR M12 IS SELECT ID_STUDENT FROM LIST_OF_STUDENTS_2K WHERE GPA=5 
+  intersect SELECT student_id FROM Olympiad_report WHERE Result_olympiad=1; 
+  CURSOR M22 IS SELECT ID_STUDENT FROM LIST_OF_STUDENTS_2K WHERE GPA=5 
+  intersect SELECT student_id FROM Olympiad_report WHERE Result_olympiad=2;
+  CURSOR M32 IS SELECT ID_STUDENT FROM LIST_OF_STUDENTS_2K WHERE GPA=4 
+  intersect SELECT student_id FROM Olympiad_report WHERE Result_olympiad=1;
+  CURSOR M42 IS SELECT ID_STUDENT FROM LIST_OF_STUDENTS_2K WHERE GPA=4 
+  intersect SELECT student_id FROM Olympiad_report WHERE Result_olympiad=2;
+  
+  ID_stud1 INTEGER;
+  ID_stud2 INTEGER;
+  ID_stud3 INTEGER;
+  ID_stud4 INTEGER;
+  
+BEGIN
+	OPEN M12; 
+	LOOP 
+		FETCH M12 INTO ID_stud1;	
+		EXIT WHEN M12%NOTFOUND;
+     UPDATE LIST_OF_STUDENTS_2K SET SCHOLARSHIP_ID=1 WHERE ID_STUDENT=ID_stud1;
+	END LOOP;		
+CLOSE M12;
+
+	OPEN M22; 
+	LOOP 
+		FETCH M22 INTO ID_stud2;	
+		EXIT WHEN M22%NOTFOUND;
+     UPDATE LIST_OF_STUDENTS_2K SET SCHOLARSHIP_ID=2 WHERE ID_STUDENT=ID_stud2;
+	END LOOP;		
+CLOSE M22;
+
+OPEN M32; 
+	LOOP 
+		FETCH M32 INTO ID_stud3;	
+		EXIT WHEN M32%NOTFOUND;
+     UPDATE LIST_OF_STUDENTS_2K SET SCHOLARSHIP_ID=3 WHERE ID_STUDENT=ID_stud3;
+	END LOOP;		
+CLOSE M32;
+
+OPEN M42; 
+	LOOP 
+		FETCH M42 INTO ID_stud4;	
+		EXIT WHEN M42%NOTFOUND;
+     UPDATE LIST_OF_STUDENTS_2K SET SCHOLARSHIP_ID=4 WHERE ID_STUDENT=ID_stud4;
+	END LOOP;		
+CLOSE M42;
+END;
+PROCEDURE Discipline_teacher 
+(teacher_name IN VARCHAR2, discipline_name IN VARCHAR2)
+IS
+discipline1 INTEGER;
+teacher1 INTEGER;
+BEGIN
+	SELECT TEACHER_ID INTO teacher1
+  FROM TEACHERS Tch
+	WHERE Tch.SURNAME = teacher_name; 
+  
+  SELECT Disc_id INTO discipline1
+  FROM Discipline Dis
+	WHERE Dis.Disc_name = discipline_name; 
+	INSERT INTO Dis_teacher (id_teacher ,id_dic) VALUES (teacher1,discipline1);
+END;
+
+PROCEDURE Contest 
+(contest_name IN VARCHAR2, name1 IN VARCHAR2,surname1 IN VARCHAR2,otch1 IN VARCHAR2, prize1 IN VARCHAR2)
+IS
+FIO1 VARCHAR2(200);
+Contest1 INTEGER;
+prize2 VARCHAR2(40);
+BEGIN
+	SELECT EVENT_ID INTO Contest1
+  FROM LIST_OF_EVENTS Ev
+	WHERE Ev.EVENT_NAME = contest_name; 
+  FIO1 := surname1||' '||name1||' '||otch1;
+	INSERT INTO Contest_report (contest_id ,FIO, prize) VALUES (Contest1,FIO1,prize1);
+END;
+
+PROCEDURE Olympiad 
+(olympiad_name IN VARCHAR2, stud_surname IN VARCHAR2, result1 IN INTEGER)
+IS
+Student INTEGER;
+Olympiad INTEGER;
+BEGIN
+	SELECT EVENT_ID INTO Olympiad
+  FROM LIST_OF_EVENTS Ev
+	WHERE Ev.EVENT_NAME = olympiad_name; 
+  
+	SELECT ID_STUDENT INTO Student
+  FROM ZAYAVKA_STUDENTS Z
+	WHERE Z.SURNAME = stud_surname; 
+	INSERT INTO Olympiad_report (olympiad_id, student_id , Result_olympiad)
+  VALUES (Olympiad,Student,result1);
+END;
+
+PROCEDURE Listing (Surname1 IN VARCHAR2, Disc1 IN VARCHAR2)
+IS
+Student INTEGER;
+Discipline1 INTEGER;
+BEGIN
+	SELECT ID_STUDENT INTO Student
+  FROM ZAYAVKA_STUDENTS Z
+	WHERE Z.SURNAME = Surname1; 
+  
+  SELECT DISC_ID INTO Discipline1
+  FROM DISCIPLINE DIS
+	WHERE DIS.DISC_NAME = Disc1;
+	INSERT INTO LIST_OF_STUDENTS_1K (ID_STUDENT,DISC_ID) VALUES (Student,Discipline1);
+END;
+
+FUNCTION SCHOLARSHIP_sum(ID_S IN INTEGER) RETURN INTEGER
+IS
+  n VARCHAR2(5);
+  kol INTEGER;
+  size_ INTEGER;
+  summ INTEGER;
+BEGIN
+SELECT COUNT(ID_STUDENT) INTO kol
+FROM LIST_OF_STUDENTS_2K
+WHERE SCHOLARSHIP_ID = ID_S;
+SELECT SIZE_SCHOLARSHIP INTO size_
+FROM SCHOLARSHIPs
+WHERE SCHOLARSHIP_ID = ID_S;
+summ:=kol*size_;
+RETURN summ;
+END ;
+
+FUNCTION Day_Of_Week(DATE1 IN DATE) RETURN VARCHAR2
+IS
+  n VARCHAR2(5);
+  s INTEGER;
+BEGIN
+  s:=TO_CHAR(DATE1,'D');
+  CASE s
+    WHEN 1 THEN n:='ПН';
+    WHEN 2 THEN n:='ВТ';
+    WHEN 3 THEN n:='СР';
+    WHEN 4 THEN n:='ЧТ';
+    WHEN 5 THEN n:='ПТ';
+    WHEN 6 THEN n:='СБ';
+    WHEN 7 THEN n:='ВС';
+  END CASE;
+  RETURN n;
+END ;
+
+FUNCTION SR_ADE_Teachers(Age INTEGER) RETURN INTEGER
+IS
+  kol INTEGER;
+  Age1 INTEGER;
+  sr INTEGER;
+BEGIN
+SELECT COUNT(Teacher_id) INTO kol
+FROM Teachers;
+SELECT SUM(Age) INTO Age1
+FROM Teachers;
+sr:=Age1/kol;
+RETURN sr;
+END ;
+END;
