@@ -1,0 +1,105 @@
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.OracleClient;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
+
+namespace ITAudit
+{
+    /// <summary>
+    /// Логика взаимодействия для Search.xaml
+    /// </summary>
+    public partial class Search : Window
+    {
+        List<ResultSearch> result = new List<ResultSearch>();
+        public bool SearchWhole = false;
+        public Search()
+        {
+            InitializeComponent();
+        }
+        public void Search1()
+        {
+            string connectionString = String.Format("Data Source = 127.0.0.1; Persist Security Info = True;  Unicode = True");
+
+            OracleConnection dbcon = null;
+            dbcon = new OracleConnection(connectionString);
+            dbcon.Open();
+
+            OracleCommand cmd_procedure = new OracleCommand("SearchAllTables", dbcon);
+            cmd_procedure.CommandType = CommandType.StoredProcedure;
+
+            OracleParameter myParameter1 = new OracleParameter("valueParam", OracleType.VarChar);
+
+            if (SearchWhole)
+            {
+                myParameter1.Value = textBox.Text;
+            }
+            else myParameter1.Value = '%' + textBox.Text + '%';
+
+            myParameter1.Direction = ParameterDirection.Input;
+            cmd_procedure.Parameters.Add(myParameter1);
+
+            cmd_procedure.ExecuteNonQuery();
+            cmd_procedure.Dispose();
+            cmd_procedure = null;
+
+            OracleCommand cmd_select = dbcon.CreateCommand();
+            cmd_select.CommandType = CommandType.Text;
+            cmd_select.CommandText = "SELECT TAB_NAME, COL_NAME, COL_VALUE FROM SEARCH_VAL1";
+
+            OracleDataReader reader = cmd_select.ExecuteReader();
+            while (reader.Read())
+            {
+                string TabName = (string)reader["TAB_NAME"];
+                string ColName = (string)reader["COL_NAME"];
+                string ColValue = (string)reader["COL_VALUE"];
+
+                result.Add(new ResultSearch(TabName, ColName, ColValue));
+            }
+
+            dbcon.Close();
+            dbcon = null;
+        }
+
+        class ResultSearch
+        {
+            public ResultSearch(string TableName, string ColumnName, string ColumnValue)
+            {
+                this.TableName = TableName;
+                this.ColumnName = ColumnName;
+                this.ColumnValue = ColumnValue;
+            }
+            public string TableName { get; set; }
+            public string ColumnName { get; set; }
+            public string ColumnValue { get; set; }
+        }
+
+        private void button_search_Click(object sender, RoutedEventArgs e)
+        {
+            result.Clear();
+            Search1();
+            dataGrid.Items.Refresh();
+            dataGrid.ItemsSource = result;
+        }
+
+        private void radioButton_whole_Checked(object sender, RoutedEventArgs e)
+        {
+            SearchWhole = true;
+        }
+
+        private void radioButton_likeness_Checked(object sender, RoutedEventArgs e)
+        {
+            SearchWhole = false;
+        }
+    }
+}
