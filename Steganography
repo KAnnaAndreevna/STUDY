@@ -1,0 +1,101 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+using System.Drawing;
+namespace Steganography
+{
+    /// <summary>
+    /// Логика взаимодействия для MainWindow.xaml
+    /// </summary>
+    public partial class MainWindow : Window
+    {
+
+        public MainWindow()
+        {
+            InitializeComponent();
+        }
+
+        private void button_Click(object sender, RoutedEventArgs e)
+        {
+            
+            Bitmap rg_b;
+            
+            rg_b = new Bitmap(@"C:\Users\admin\documents\visual studio 2015\Projects\Steganography\Steganography\Resources\good-morning.bmp", true);
+            
+            int[] Text = new int[9999999];
+
+            ConvertToShifr _convertToShifr = new ConvertToShifr();
+            int i = 0;
+
+                foreach (char s in passwordBox.Password)
+                {
+                    Text[i] = _convertToShifr.Load(s);
+                i++;
+                }
+            
+            int length = i;
+            Array.Resize <int> (ref Text, length);
+
+            int x = 0;
+            int y = 0;
+            int i1 = 0;
+
+            Color[] _color = new Color[length];
+
+            foreach (int s in Text)
+            {
+                _color[i1] = ColorTranslator.FromHtml(s.ToString());
+                i1++;
+            }
+           
+            foreach (Color s in _color)
+            {
+                rg_b.SetPixel(x, y, s);
+                x++; 
+            }
+            image1.Source = BitmapToBitmapImage (rg_b);
+
+            Bitmap bi = new Bitmap(@"C:\Users\admin\Documents\Visual Studio 2015\Projects\Steganography\Steganography\bin\Debug\good-morning.bmp");
+            
+            Color[] _color1 = new Color[length];
+            Byte[] _byte = new Byte[length];
+            
+            int i2 = 0;
+            x = 0; y = 0;
+            while (i2 != i)
+            {
+                _color1[i2] = bi.GetPixel(x, y);
+                _byte[i2] = _color1[i2].B;
+                i2++;
+                x++;
+            }
+
+            Transcript _transcript = new Transcript();
+
+            foreach (byte s in _byte)
+            {
+                textBlock1.Text += _transcript.Load(s).ToString();
+            }
+        }
+
+        private BitmapImage BitmapToBitmapImage(Bitmap bitmap)
+        {
+            bitmap.Save(@"C:\Users\admin\Documents\Visual Studio 2015\Projects\Steganography\Steganography\bin\Debug\good-morning.bmp");
+            BitmapImage bi = new BitmapImage();
+            bi.BeginInit();
+            bi.UriSource = new Uri("pack://application:,,,/good-morning.bmp");
+            bi.EndInit();
+            return bi; 
+        } 
+    }
+}
