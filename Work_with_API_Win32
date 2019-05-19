@@ -1,0 +1,77 @@
+#include <windows.h>
+#include <iostream>
+using namespace std;
+int main()
+{
+	system("color F0"); 
+     setlocale(LC_ALL, "Russian");   
+  
+	WIN32_FIND_DATA FindFileData;  	
+	HANDLE hFind;                  	
+     DWORD dwFileType;   	
+	SYSTEMTIME st, stUTC;           					
+	char str[] = "",argv[255] = ""; 
+	cout << "Введите путь к каталогу" << endl;
+	cin >> argv; 
+	cout << endl;
+   
+   strcat(str,argv);				
+   strcat(str,"*.*");				 
+   hFind = FindFirstFile(str, &FindFileData);
+   strcpy(str,"");			
+   strcat(str,argv);		
+   strcat(str,FindFileData.cFileName);
+   HANDLE hFile = CreateFile(
+   str, 
+   GENERIC_READ, 
+   0, 
+   NULL,     
+   CREATE_ALWAYS, 
+   FILE_ATTRIBUTE_NORMAL, 
+   NULL);	
+   FileTimeToSystemTime(&FindFileData.ftLastWriteTime,&st);	
+   cout << "Имя первого файла: " << FindFileData.cFileName <<   endl; 
+   cout << "Размер: " << (FindFileData.nFileSizeHigh * MAXDWORD) + FindFileData.nFileSizeLow << " байт" << endl;
+   cout << "Дата и время создания: " <<  st.wDay << "." << st.wMonth << "." << st.wYear << "; "
+<< st.wHour << ":" << st.wMinute << ":" << st.wSecond << endl;
+
+dwFileType=GetFileType(hFile);		
+switch (dwFileType){	
+case FILE_TYPE_UNKNOWN: cout<<"Неизвестный тип  файла" <<   endl;; break;
+case FILE_TYPE_DISK: cout<<"Дисковый файл" << endl;; break;
+case FILE_TYPE_CHAR: cout<<"Символьный файл" << endl;; break;
+case FILE_TYPE_PIPE: cout<<"Именованный или анонимный канал" << endl;; break;
+default: break; }
+cout << endl;
+   
+while (FindNextFile(hFind, &FindFileData)!=0){
+strcpy(str,"");			
+strcat(str,argv);		
+strcat(str,FindFileData.cFileName);
+HANDLE hFile=CreateFile(
+str,
+0,
+0,
+0,
+OPEN_EXISTING,
+FILE_ATTRIBUTE_NORMAL,
+0);
+FileTimeToSystemTime(&FindFileData.ftLastWriteTime,&st);
+cout << "Имя файла: " << FindFileData.cFileName << endl; 
+cout << "Размер: " << (FindFileData.nFileSizeHigh * MAXDWORD) + FindFileData.nFileSizeLow << " байт" << endl;
+cout << "Дата и время создания: " <<  st.wDay << "." << st.wMonth << "." << st.wYear << "; " 
+<< st.wHour << ":" << st.wMinute << ":" << st.wSecond << endl;
+
+dwFileType=GetFileType(hFile);
+switch (dwFileType){	
+case FILE_TYPE_UNKNOWN: cout<<"Неизвестный тип  файла" << endl;; break;
+case FILE_TYPE_DISK: cout<<"Дисковый файл" << endl;; break;
+case FILE_TYPE_CHAR: cout<<"Символьный файл" << endl;; break;
+case FILE_TYPE_PIPE: cout<<"Именованный или анонимный канал" << endl;; break;
+default: break;}
+cout << endl;
+}
+   FindClose(hFind);
+   system("PAUSE");
+   return 0;
+}
