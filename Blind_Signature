@@ -1,0 +1,195 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+
+namespace Blind_Signature
+{
+    /// <summary>
+    /// Логика взаимодействия для MainWindow.xaml
+    /// </summary>
+    public partial class MainWindow : Window
+    {
+        public int e1;
+        public int k, m, n, t;
+        public MainWindow()
+        {
+            InitializeComponent();
+            label_bob_do.Text = "Необходимо ввести открытый ключ e";
+            //textBlock.Text = "Необходимо ввести случайное число k,взаимно простое с n, сообщение для подписи m";
+        }
+
+        private void textBox_e_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            button1.Visibility = Visibility;
+            label_bob_do.Text = "Передать открытый ключ е Алисе";
+        }
+
+        private void textBox_m_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            button.Visibility = Visibility;
+            label_alisa_do.Text = "Передать замаксированное сообщение t Бобу";
+            textBox_k.IsEnabled = false;
+            textBox_n.IsEnabled = false;
+            textBox_m.IsEnabled = false;
+            textBox_d.IsEnabled = true;
+        }
+
+        private void textBox_d_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            button2.Visibility = Visibility;
+            label_bob_do.Text = "Передать подписанное сообщение td Алисе";
+        }
+
+        private void button_Click(object sender, RoutedEventArgs e)
+        {
+            k = Convert.ToInt32(textBox_k.Text);
+            n = Convert.ToInt32(textBox_n.Text);
+            m = Convert.ToInt32(textBox_m.Text);
+       
+            t = m * (int)Math.Pow(k, e1) % n;
+            label_t.Content += t.ToString();
+            label_bob_do.Text = "Необходимо ввести закрытый ключ d";
+            label_alisa_do.Text = "";
+            button.IsEnabled = false;
+        }
+
+        private void button1_Click(object sender, RoutedEventArgs e)
+        {
+            e1 = Convert.ToInt32(textBox_e.Text);
+            label_bob_do.Text = "";
+            label_alisa_do.Text = "Необходимо ввести случайное число k,взаимно простое с n, сообщение для подписи m";
+            textBox_k.IsEnabled = true;
+            textBox_n.IsEnabled = true;
+            textBox_m.IsEnabled = true;
+            textBox_e.IsEnabled = false;
+            button1.IsEnabled = false;
+        }
+
+        private void button2_Click(object sender, RoutedEventArgs e)
+        {
+            int d = Convert.ToInt32(textBox_d.Text);
+            int td = (int)Math.Pow(m * (int)Math.Pow(k, e1), d) % n;
+            label_td.Content += td.ToString();
+
+            //расширенный алгоритм Евклида
+
+            int[] A = new int[10];
+            int[] B = new int[10];
+            int[] C = new int[10];
+            int[] D = new int[10];
+            int[] X = new int[10];
+            int[] Y = new int[10];
+
+            int i = 1;
+
+            A[0] = n;
+            B[0] = k;
+            C[0] = A[0] % B[0];
+            D[0] = A[0] / B[0];
+
+            while (C[i - 1] != 0)
+            {
+                A[i] = B[i - 1];
+                B[i] = C[i - 1];
+                C[i] = A[i] % B[i];
+                D[i] = A[i] / B[i];
+                i++;
+            }
+
+            Array.Resize(ref A, i);
+            Array.Resize(ref B, i);
+            Array.Resize(ref C, i);
+            Array.Resize(ref D, i);
+            Array.Resize(ref X, i);
+            Array.Resize(ref Y, i);
+
+            i--;
+
+            X[i] = 0;
+            Y[i] = 1;
+
+            while (i != 0)
+            {
+                X[i - 1] = Y[i];
+                Y[i - 1] = X[i] - (Y[i] * D[i - 1]);
+                i--;
+            }
+
+            int a = X[0];
+            int b = Y[0];
+
+            label.Content += "\r";
+
+            foreach (int s in A)
+            {
+                label.Content += s.ToString();
+                label.Content += "\r";
+            }
+
+            label1.Content += "\r";
+
+            foreach (int s in B)
+            {
+
+                label1.Content += s.ToString();
+                label1.Content += "\r";
+            }
+
+            label2.Content += "\r";
+
+            foreach (int s in C)
+            {
+                label2.Content += s.ToString();
+                label2.Content += "\r";
+            }
+
+            label3.Content += "\r";
+
+            foreach (int s in D)
+            {
+
+                label3.Content += s.ToString();
+                label3.Content += "\r";
+            }
+
+            label9.Content += "\r";
+
+            foreach (int s in X)
+            {
+                label9.Content += s.ToString();
+                label9.Content += "\r";
+            }
+
+            label10.Content += "\r";
+
+            foreach (int s in Y)
+            {
+                label10.Content += s.ToString();
+                label10.Content += "\r";
+            }
+
+            textBox_d.IsEnabled = false;
+            button2.IsEnabled = false;
+            label_bob_do.Text = "";
+
+            int s1 = Y[0] * k * m;
+
+            if (((s1 - m) % n) == 0)
+            {
+                label_s.Content += "s≡" + s1 + "≡" + m + "mod" + n;
+                MessageBox.Show("Подпись верна!");
+            }
+        }
+    }
+}
