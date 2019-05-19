@@ -1,0 +1,64 @@
+#include <windows.h>
+#include <iostream>
+#include <stdio.h>
+#include <string>
+using namespace std;
+void sleep(BYTE time);
+
+int main()
+{
+  system("color F0");
+  setlocale(LC_ALL, "rus");
+  STARTUPINFO CIF;  
+  ZeroMemory(&CIF,sizeof(STARTUPINFO)); 
+  PROCESS_INFORMATION PI[5];  
+  char argv[20] ="";    
+  char str[255] ;        
+  char a[21]="C:\\Windows\\System32\\";  
+  char b[5]=".exe";
+  DWORD ExitCode; 
+    for(int i=1;i<=5;i++)  
+      {
+        cout << "Название "<<i<<" файла:";
+      cin >> argv;    
+        strcpy(str,a);    
+        strcat(str,argv);  
+        strcat(str,b);    
+
+      if (CreateProcess(   //функция запуска процесса
+        (LPCSTR)str, // имя исполняемого модуля
+        NULL,// Командная строка
+        NULL,// Указатель на структуру SECURITY_ATTRIBUTES
+        NULL,// Указатель на структуру SECURITY_ATTRIBUTES
+        FALSE,// Флаг наследования текущего процесса
+        NULL,// Флаги способов создания процесса
+        NULL, // Указатель на блок среды
+        NULL,// Текущий диск или каталог
+        &CIF,// Указатель нас структуру STARTUPINFO
+        &PI[i])// Указатель нас структуру                              
+        PROCESS_INFORMATION ==TRUE)  // Если процесс создан
+          {
+        cout << "Процесс " <<argv << " создан" << endl;
+        cout << "Дескриптор процесса " <<PI[i].hProcess <<  endl;
+        cout << "Дескриптор потока " <<PI[i].hThread <<  endl;
+        cout << "Значение, которое может быть использовано для идентификации процесса: " << PI[i].dwProcessId << endl;
+        cout << "Значение, которое может быть использовано, чтобы определить поток: " << PI[i].dwThreadId << endl;
+        sleep((BYTE)1);
+        cout << endl;
+
+        GetExitCodeProcess(PI[i].hProcess,&ExitCode); 
+            }
+         } 
+        for(int i=1;i<=5;i++){
+          TerminateProcess(PI[i].hProcess,0); 
+         }
+  ExitProcess(ExitCode);	
+  system("PAUSE");
+  return EXIT_SUCCESS;
+}
+
+void sleep(BYTE time) 
+{
+  Sleep((DWORD)time*1000);
+  return;
+}
